@@ -1,0 +1,15 @@
+<p>shogiban works well!</p>
+
+<div class="shogi-page">
+  <div class="shogi-layout">
+    <div #handLeft class="sg-hand-wrap hand-column hand-top"></div>
+
+    <div class="board-column">
+      <div #board class="sg-wrap board-host"></div>
+    </div>
+
+    <div #handRight class="sg-hand-wrap hand-column hand-bottom"></div>
+  </div>
+  <p>{{ history.length }}</p>
+  <app-move-history [history]="history" [currentPly]="currentPly" (selectPly)="goToPly($event)" />
+</div>

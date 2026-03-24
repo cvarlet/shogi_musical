@@ -1,0 +1,67 @@
+<section class="history-panel">
+  <div class="history-header">
+    <div class="history-title">Historique</div>
+
+    <button
+      type="button"
+      class="start-btn"
+      [class.active]="currentPly === 0"
+      (click)="onSelectPly(0)"
+    >
+      Début
+    </button>
+  </div>
+
+  <div class="history-list">
+    <div class="history-row" *ngFor="let row of rows; trackBy: trackByMoveNumber">
+      <div class="move-number">{{ row.moveNumber }}.</div>
+
+      <button
+        type="button"
+        class="move-btn"
+        [class.active]="row.sente?.ply === currentPly"
+        [disabled]="!row.sente"
+        (click)="row.sente && onSelectPly(row.sente.ply)"
+      >
+        {{ row.sente?.label || '—' }}
+      </button>
+
+      <button
+        type="button"
+        class="move-btn"
+        [class.active]="row.gote?.ply === currentPly"
+        [disabled]="!row.gote"
+        (click)="row.gote && onSelectPly(row.gote.ply)"
+      >
+        {{ row.gote?.label || '—' }}
+      </button>
+    </div>
+  </div>
+</section>
+<div class="history-actions">
+  <button type="button" class="nav-btn" (click)="onSelectPly(0)">|&lt;</button>
+  <button
+    type="button"
+    class="nav-btn"
+    [disabled]="currentPly <= 0"
+    (click)="onSelectPly(currentPly - 1)"
+  >
+    &lt;
+  </button>
+  <button
+    type="button"
+    class="nav-btn"
+    [disabled]="currentPly >= history.length"
+    (click)="onSelectPly(currentPly + 1)"
+  >
+    &gt;
+  </button>
+  <button
+    type="button"
+    class="nav-btn"
+    [disabled]="currentPly >= history.length"
+    (click)="onSelectPly(history.length)"
+  >
+    &gt;|
+  </button>
+</div>

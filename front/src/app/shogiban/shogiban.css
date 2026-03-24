@@ -1,0 +1,31 @@
+.shogi-layout {
+  display: flex;
+  align-items: stretch;
+  /* gap: 16px; */
+  width: fit-content;
+}
+
+.board-column {
+  width: 640px;
+}
+
+.board-host {
+  width: 640px;
+  height: calc(640px / 11 * 12);
+}
+
+.hand-column {
+  width: 90px;
+  height: calc(640px / 11 * 7 + 3rem);
+  position: relative;
+}
+
+.colored-square {
+  background-color: red !important;
+}
+
+.shogi-page {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+}
