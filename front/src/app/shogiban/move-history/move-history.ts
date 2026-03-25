@@ -1,23 +1,38 @@
 import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 
-export type MoveHistoryEntry = {
-  ply: number;
-  side: 'sente' | 'gote';
-  kind: 'move' | 'drop';
+export type MoveNode = {
+  id: string;
+  parentId: string | null;
+  childrenIds: string[];
+
+  side: 'sente' | 'gote' | null;
+  kind: 'root' | 'move' | 'drop';
   label: string;
   sfenAfter: string;
 
   from?: string;
-  to: string;
+  to?: string;
   role?: string;
   promotion?: boolean;
 };
 
-type MoveHistoryRow = {
-  moveNumber: number;
-  sente?: MoveHistoryEntry;
-  gote?: MoveHistoryEntry;
+export type HistoryMoveView = {
+  nodeId: string;
+  label: string;
+  ply: number;
+  side: 'sente' | 'gote';
+  variations: HistoryBranchView[];
+};
+
+export type HistoryBranchView = {
+  startNodeId: string;
+  moves: HistoryMoveView[];
+};
+
+export type HistoryTreeView = {
+  mainline: HistoryBranchView | null;
+  rootVariations: HistoryBranchView[];
 };
 
 @Component({
@@ -28,38 +43,25 @@ type MoveHistoryRow = {
   styleUrl: './move-history.css',
 })
 export class MoveHistoryComponent {
-  @Input() history: MoveHistoryEntry[] = [];
-  @Input() currentPly = 0;
+  @Input() tree: HistoryTreeView | null = null;
+  @Input() selectedNodeId = 'root';
 
-  @Output() selectPly = new EventEmitter<number>();
+  @Output() selectNode = new EventEmitter<string>();
 
-  get rows(): MoveHistoryRow[] {
-    const rows: MoveHistoryRow[] = [];
-
-    for (const entry of this.history) {
-      const rowIndex = Math.floor((entry.ply - 1) / 2);
-
-      if (!rows[rowIndex]) {
-        rows[rowIndex] = {
-          moveNumber: rowIndex + 1,
-        };
-      }
-
-      if (entry.side === 'sente') {
-        rows[rowIndex].sente = entry;
-      } else {
-        rows[rowIndex].gote = entry;
-      }
-    }
-
-    return rows;
+  onSelectNode(nodeId: string): void {
+    this.selectNode.emit(nodeId);
   }
 
-  onSelectPly(ply: number): void {
-    this.selectPly.emit(ply);
+  isSelected(nodeId: string): boolean {
+    return nodeId === this.selectedNodeId;
   }
 
-  trackByMoveNumber(_: number, row: MoveHistoryRow): number {
-    return row.moveNumber;
+  shouldShowMoveNumber(indexInBranch: number, side: 'sente' | 'gote'): boolean {
+    return side === 'sente' || indexInBranch === 0;
+  }
+
+  formatMoveNumber(ply: number, side: 'sente' | 'gote'): string {
+    const moveNumber = Math.ceil(ply / 2);
+    return side === 'sente' ? `${moveNumber}.` : `${moveNumber}...`;
   }
 }

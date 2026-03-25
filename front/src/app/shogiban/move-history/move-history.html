@@ -4,64 +4,62 @@
 
     <button
       type="button"
-      class="start-btn"
-      [class.active]="currentPly === 0"
-      (click)="onSelectPly(0)"
+      class="nav-btn"
+      [class.active]="selectedNodeId === 'root'"
+      (click)="onSelectNode('root')"
     >
       Début
     </button>
   </div>
 
   <div class="history-list">
-    <div class="history-row" *ngFor="let row of rows; trackBy: trackByMoveNumber">
-      <div class="move-number">{{ row.moveNumber }}.</div>
+    <ng-container *ngIf="tree?.mainline as mainline">
+      <ng-container
+        *ngTemplateOutlet="branchTpl; context: { $implicit: mainline, depth: 0 }"
+      ></ng-container>
+    </ng-container>
 
-      <button
-        type="button"
-        class="move-btn"
-        [class.active]="row.sente?.ply === currentPly"
-        [disabled]="!row.sente"
-        (click)="row.sente && onSelectPly(row.sente.ply)"
-      >
-        {{ row.sente?.label || '—' }}
-      </button>
+    <div class="root-variations" *ngIf="tree?.rootVariations?.length">
+      <div class="variation-block" *ngFor="let variation of tree?.rootVariations">
+        <span class="variation-paren">(</span>
 
-      <button
-        type="button"
-        class="move-btn"
-        [class.active]="row.gote?.ply === currentPly"
-        [disabled]="!row.gote"
-        (click)="row.gote && onSelectPly(row.gote.ply)"
-      >
-        {{ row.gote?.label || '—' }}
-      </button>
+        <ng-container
+          *ngTemplateOutlet="branchTpl; context: { $implicit: variation, depth: 1 }"
+        ></ng-container>
+
+        <span class="variation-paren">)</span>
+      </div>
     </div>
   </div>
 </section>
-<div class="history-actions">
-  <button type="button" class="nav-btn" (click)="onSelectPly(0)">|&lt;</button>
-  <button
-    type="button"
-    class="nav-btn"
-    [disabled]="currentPly <= 0"
-    (click)="onSelectPly(currentPly - 1)"
-  >
-    &lt;
-  </button>
-  <button
-    type="button"
-    class="nav-btn"
-    [disabled]="currentPly >= history.length"
-    (click)="onSelectPly(currentPly + 1)"
-  >
-    &gt;
-  </button>
-  <button
-    type="button"
-    class="nav-btn"
-    [disabled]="currentPly >= history.length"
-    (click)="onSelectPly(history.length)"
-  >
-    &gt;|
-  </button>
-</div>
+
+<ng-template #branchTpl let-branch let-depth="depth">
+  <div class="branch-sequence" [class.nested-branch]="depth > 0">
+    <ng-container *ngFor="let move of branch.moves; let i = index">
+      <span class="move-number" *ngIf="shouldShowMoveNumber(i, move.side)">
+        {{ formatMoveNumber(move.ply, move.side) }}
+      </span>
+
+      <button
+        type="button"
+        class="move-token"
+        [class.active]="isSelected(move.nodeId)"
+        (click)="onSelectNode(move.nodeId)"
+      >
+        {{ move.label }}
+      </button>
+
+      <ng-container *ngFor="let variation of move.variations">
+        <span class="variation-inline">
+          <span class="variation-paren">(</span>
+
+          <ng-container
+            *ngTemplateOutlet="branchTpl; context: { $implicit: variation, depth: depth + 1 }"
+          ></ng-container>
+
+          <span class="variation-paren">)</span>
+        </span>
+      </ng-container>
+    </ng-container>
+  </div>
+</ng-template>

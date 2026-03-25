@@ -10,6 +10,10 @@
 
     <div #handRight class="sg-hand-wrap hand-column hand-bottom"></div>
   </div>
-  <p>{{ history.length }}</p>
-  <app-move-history [history]="history" [currentPly]="currentPly" (selectPly)="goToPly($event)" />
+
+  <app-move-history
+    [tree]="historyTree"
+    [selectedNodeId]="currentNodeId"
+    (selectNode)="goToNode($event)"
+  />
 </div>

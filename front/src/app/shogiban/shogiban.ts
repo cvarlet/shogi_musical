@@ -13,7 +13,12 @@ import { checksSquareNames, shogigroundDropDests, shogigroundMoveDests } from 's
 import { parseSquareName } from 'shogiops/util';
 import type { Rules } from 'shogiops/types';
 import { pieceCanPromote, pieceForcePromote, promote, unpromote } from 'shogiops/variant/util';
-import { MoveHistoryComponent, type MoveHistoryEntry } from './move-history/move-history';
+import {
+  HistoryBranchView,
+  HistoryTreeView,
+  MoveHistoryComponent,
+  MoveNode,
+} from './move-history/move-history';
 
 @Component({
   selector: 'app-shogiban',
@@ -39,9 +44,9 @@ export class Shogiban implements AfterViewInit {
 
   private position?: any;
 
-  public history: MoveHistoryEntry[] = [];
-  private ply = 0;
-  public currentPly = 0;
+  public currentNodeId = 'root';
+  public nodesById: Record<string, MoveNode> = {};
+  private nodeSeq = 0;
 
   ngAfterViewInit(): void {
     if (!this.boardRef?.nativeElement) {
@@ -57,8 +62,21 @@ export class Shogiban implements AfterViewInit {
 
   private initializePosition(): void {
     this.position = parseSfen(this.rules, this.initialSfenString).unwrap();
-    this.history = [];
-    this.currentPly = 0;
+
+    this.nodesById = {
+      root: {
+        id: 'root',
+        parentId: null,
+        childrenIds: [],
+        side: null,
+        kind: 'root',
+        label: 'Début',
+        sfenAfter: this.initialSfenString,
+      },
+    };
+
+    this.currentNodeId = 'root';
+    this.nodeSeq = 0;
   }
 
   private initializeGround(): void {
@@ -146,18 +164,6 @@ export class Shogiban implements AfterViewInit {
         forceMovePromotion: (orig, dest) => {
           return this.mustPromoteOnMove(orig, dest);
         },
-
-        events: {
-          initiated: () => {
-            console.log('Dialogue de promotion lancé');
-          },
-          after: (piece) => {
-            console.log('Pièce choisie pour la promotion :', piece);
-          },
-          cancel: () => {
-            console.log('Promotion annulée');
-          },
-        },
       },
 
       checks: checksSquareNames(this.position),
@@ -173,15 +179,12 @@ export class Shogiban implements AfterViewInit {
   }
 
   private handleNormalMove(orig: string, dest: string, prom: boolean): void {
-    console.log('handleNormalMove called', { orig, dest, prom });
-
     if (!this.position) return;
 
     const from = parseSquareName(orig);
     const to = parseSquareName(dest);
 
     if (from === undefined || to === undefined) {
-      console.warn('Case introuvable :', { orig, dest });
       this.syncGroundFromState();
       return;
     }
@@ -193,7 +196,6 @@ export class Shogiban implements AfterViewInit {
     };
 
     if (!this.position.isLegal(move)) {
-      console.warn('Coup illégal refusé :', move);
       this.syncGroundFromState();
       return;
     }
@@ -205,7 +207,7 @@ export class Shogiban implements AfterViewInit {
 
     const sfenAfter = makeSfen(this.position);
 
-    this.pushMoveHistory({
+    this.appendChildNode({
       side,
       kind: 'move',
       label,
@@ -215,10 +217,8 @@ export class Shogiban implements AfterViewInit {
       sfenAfter,
     });
 
-    console.log('Coup joué :', move);
-    console.log('Nouveau SFEN :', sfenAfter);
-
     this.syncGroundFromState();
+    this.cdr.detectChanges();
   }
 
   private computeDropDests() {
@@ -226,14 +226,12 @@ export class Shogiban implements AfterViewInit {
     return shogigroundDropDests(this.position);
   }
 
-  private handleDrop(piece: { role: string }, key: string, prom: boolean): void {
-    console.log('handleDrop called', { piece, key, prom });
+  private handleDrop(piece: { role: string }, key: string, _prom: boolean): void {
     if (!this.position) return;
 
     const to = parseSquareName(key);
 
     if (to === undefined) {
-      console.warn('Case de drop introuvable :', key);
       this.syncGroundFromState();
       return;
     }
@@ -244,7 +242,6 @@ export class Shogiban implements AfterViewInit {
     };
 
     if (!this.position.isLegal(dropMove)) {
-      console.warn('Drop illégal refusé :', dropMove);
       this.syncGroundFromState();
       return;
     }
@@ -256,19 +253,17 @@ export class Shogiban implements AfterViewInit {
 
     const sfenAfter = makeSfen(this.position);
 
-    this.pushMoveHistory({
+    this.appendChildNode({
       side,
       kind: 'drop',
       label,
-      to: key,
       role: piece.role,
+      to: key,
       sfenAfter,
     });
 
-    console.log('Drop joué :', dropMove, 'prom =', prom);
-    console.log('Nouveau SFEN :', sfenAfter);
-
     this.syncGroundFromState();
+    this.cdr.detectChanges();
   }
 
   private canPromoteOnMove(orig: string, dest: string): boolean {
@@ -318,50 +313,119 @@ export class Shogiban implements AfterViewInit {
     return `${role}*${dest}`;
   }
 
-  private pushMoveHistory(entry: Omit<MoveHistoryEntry, 'ply'>): void {
-    if (this.currentPly < this.history.length) {
-      this.history = this.history.slice(0, this.currentPly);
-    }
+  public goToNode(nodeId: string): void {
+    const node = this.nodesById[nodeId];
+    if (!node) return;
 
-    const nextPly = this.history.length + 1;
-
-    this.history = [
-      ...this.history,
-      {
-        ply: nextPly,
-        ...entry,
-      },
-    ];
-
-    this.currentPly = nextPly;
-
-    console.log('history updated', this.history);
-    console.log('history length', this.history.length);
-
+    this.position = parseSfen(this.rules, node.sfenAfter).unwrap();
+    this.currentNodeId = nodeId;
+    this.syncGroundFromState();
     this.cdr.detectChanges();
   }
 
-  public goToPly(ply: number): void {
-    const sfen = ply === 0 ? this.initialSfenString : this.history[ply - 1]?.sfenAfter;
-
-    if (!sfen) return;
-
-    this.position = parseSfen(this.rules, sfen).unwrap();
-    this.currentPly = ply;
-    this.syncGroundFromState();
+  private createNodeId(): string {
+    this.nodeSeq += 1;
+    return `n${this.nodeSeq}`;
   }
 
-  public goToPreviousPly(): void {
-    if (this.currentPly <= 0) return;
-    this.goToPly(this.currentPly - 1);
+  private appendChildNode(entry: Omit<MoveNode, 'id' | 'parentId' | 'childrenIds'>): void {
+    const parentId = this.currentNodeId;
+    const parentNode = this.nodesById[parentId];
+
+    if (!parentNode) return;
+
+    const existingChildId = parentNode.childrenIds.find((childId) => {
+      const child = this.nodesById[childId];
+      return child?.sfenAfter === entry.sfenAfter;
+    });
+
+    if (existingChildId) {
+      this.currentNodeId = existingChildId;
+      return;
+    }
+
+    const newId = this.createNodeId();
+
+    const newNode: MoveNode = {
+      id: newId,
+      parentId,
+      childrenIds: [],
+      ...entry,
+    };
+
+    this.nodesById = {
+      ...this.nodesById,
+      [newId]: newNode,
+      [parentId]: {
+        ...parentNode,
+        childrenIds: [...parentNode.childrenIds, newId],
+      },
+    };
+
+    this.currentNodeId = newId;
   }
 
-  public goToNextPly(): void {
-    if (this.currentPly >= this.history.length) return;
-    this.goToPly(this.currentPly + 1);
+  private getMainChildId(nodeId: string): string | undefined {
+    const node = this.nodesById[nodeId];
+    if (!node || node.childrenIds.length === 0) return undefined;
+    return node.childrenIds[0];
   }
 
-  public goToLastPly(): void {
-    this.goToPly(this.history.length);
+  private buildHistoryBranch(
+    startNodeId: string,
+    startPly: number,
+    includeSiblingVariationsOnFirstMove: boolean,
+  ): HistoryBranchView {
+    const moves: HistoryBranchView['moves'] = [];
+
+    let currentId: string | undefined = startNodeId;
+    let ply = startPly;
+    let isFirstMove = true;
+
+    while (currentId) {
+      const node = this.nodesById[currentId];
+      if (!node || node.kind === 'root') break;
+
+      let variations: HistoryBranchView[] = [];
+
+      if (!(isFirstMove && !includeSiblingVariationsOnFirstMove)) {
+        const parent = node.parentId !== null ? this.nodesById[node.parentId] : undefined;
+
+        const siblingIds = parent?.childrenIds.filter((childId) => childId !== currentId) ?? [];
+
+        variations = siblingIds.map((siblingId) => this.buildHistoryBranch(siblingId, ply, false));
+      }
+
+      moves.push({
+        nodeId: node.id,
+        label: node.label,
+        ply,
+        side: node.side as 'sente' | 'gote',
+        variations,
+      });
+
+      currentId = this.getMainChildId(currentId);
+      ply += 1;
+      isFirstMove = false;
+    }
+
+    return {
+      startNodeId,
+      moves,
+    };
+  }
+
+  public get historyTree(): HistoryTreeView | null {
+    const root = this.nodesById['root'];
+    if (!root) return null;
+
+    const [mainlineStartId, ...rootVariationIds] = root.childrenIds;
+
+    return {
+      mainline: mainlineStartId ? this.buildHistoryBranch(mainlineStartId, 1, false) : null,
+      rootVariations: rootVariationIds.map((variationId) =>
+        this.buildHistoryBranch(variationId, 1, false),
+      ),
+    };
   }
 }
