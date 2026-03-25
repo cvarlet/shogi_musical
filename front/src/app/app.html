@@ -1,2 +1,41 @@
-<h1>Hello {{ title }}</h1>
-<app-shogiban></app-shogiban>
+<div class="app-shell">
+  <header class="site-header">
+    <div class="site-header__inner">
+      <a class="brand" routerLink="/analyse" aria-label="Aller à la page d'analyse">
+        <span class="brand__mark">SB</span>
+        <span class="brand__text">ShogiBase</span>
+      </a>
+
+      <nav class="main-nav" aria-label="Navigation principale">
+        <a
+          class="main-nav__link"
+          routerLink="/analyse"
+          routerLinkActive="active"
+          [routerLinkActiveOptions]="{ exact: true }"
+        >
+          Analyse
+        </a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="site-main">
+    <section class="hero">
+      <p class="hero__eyebrow">Prototype front-end</p>
+      <h1 class="hero__title">Analyse de parties de shogi</h1>
+      <p class="hero__text">
+        Cette page regroupe le plateau, les pièces en main et l’historique des coups dans une
+        interface plus propre et plus lisible, pensée pour évoluer ensuite vers une vraie page
+        d’analyse.
+      </p>
+    </section>
+
+    <section class="page-section">
+      <router-outlet />
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <p>ShogiBase · Interface de démonstration</p>
+  </footer>
+</div>

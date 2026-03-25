@@ -1,19 +1,40 @@
-<p>shogiban works well!</p>
-
-<div class="shogi-page">
-  <div class="shogi-layout">
-    <div #handLeft class="sg-hand-wrap hand-column hand-top"></div>
-
-    <div class="board-column">
-      <div #board class="sg-wrap board-host"></div>
+<div class="analysis-layout">
+  <section class="workspace-card">
+    <div class="section-head">
+      <p class="section-head__eyebrow">Plateau</p>
+      <h2 class="section-head__title">Espace d’analyse</h2>
+      <p class="section-head__text">
+        Le plateau, les mains et la navigation des positions sont regroupés ici dans une mise en
+        page plus classique et plus lisible.
+      </p>
     </div>
 
-    <div #handRight class="sg-hand-wrap hand-column hand-bottom"></div>
-  </div>
+    <div class="workspace-card__body">
+      <div class="shogi-layout">
+        <div #handLeft class="sg-hand-wrap hand-column hand-top"></div>
 
-  <app-move-history
-    [tree]="historyTree"
-    [selectedNodeId]="currentNodeId"
-    (selectNode)="goToNode($event)"
-  />
+        <div class="board-column">
+          <div #board class="sg-wrap board-host"></div>
+        </div>
+
+        <div #handRight class="sg-hand-wrap hand-column hand-bottom"></div>
+      </div>
+    </div>
+  </section>
+
+  <aside class="history-side">
+    <section class="history-intro">
+      <p class="section-head__eyebrow">Historique</p>
+      <h2 class="section-head__title">Suivi des coups</h2>
+      <p class="section-head__text">
+        L’historique affiche les variantes et permet de revenir rapidement sur une position.
+      </p>
+    </section>
+
+    <app-move-history
+      [tree]="historyTree"
+      [selectedNodeId]="currentNodeId"
+      (selectNode)="goToNode($event)"
+    />
+  </aside>
 </div>
