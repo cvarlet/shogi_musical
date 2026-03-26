@@ -52,6 +52,15 @@
         >
           {{ showLastMoveHighlight ? 'Masquer le dernier coup' : 'Afficher le dernier coup' }}
         </button>
+
+        <button
+          type="button"
+          class="toolbar-btn toolbar-btn--neutral"
+          [class.active]="activeArrowTool === 'erase'"
+          (click)="setArrowTool(activeArrowTool === 'erase' ? 'draw' : 'erase')"
+        >
+          {{ activeArrowTool === 'erase' ? 'Gomme active' : 'Activer la gomme' }}
+        </button>
       </div>
     </div>
 
@@ -72,10 +81,15 @@
               [enemyCounts]="opponentDefenderCounts"
             />
 
-            <app-board-arrows-overlay
-              [visible]="analysisArrows.length > 0"
-              [arrows]="analysisArrows"
-            />
+            @if (analysisArrows.length > 0) {
+              <app-board-arrows-overlay
+                [visible]="true"
+                [arrows]="analysisArrows"
+                [hoveredArrowId]="hoveredArrowId"
+                (arrowHover)="onArrowHover($event)"
+                (arrowClick)="onArrowClick($event)"
+              />
+            }
           </div>
         </div>
 

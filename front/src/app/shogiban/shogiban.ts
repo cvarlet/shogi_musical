@@ -4,6 +4,7 @@ import {
   Component,
   ElementRef,
   NgZone,
+  OnInit,
   ViewChild,
   ViewEncapsulation,
 } from '@angular/core';
@@ -39,7 +40,7 @@ type NativeDrawableShape = {
   styleUrl: './shogiban.css',
   encapsulation: ViewEncapsulation.None,
 })
-export class Shogiban implements AfterViewInit {
+export class Shogiban implements OnInit, AfterViewInit {
   constructor(
     private ngZone: NgZone,
     private cdr: ChangeDetectorRef,
@@ -80,13 +81,21 @@ export class Shogiban implements AfterViewInit {
     // },
   ];
 
+  public hoveredArrowId: string | null = null;
+  public activeArrowTool: 'draw' | 'erase' = 'draw';
+
+  private arrowSeq = 0;
+
+  ngOnInit(): void {
+    this.initializePosition();
+  }
+
   ngAfterViewInit(): void {
     if (!this.boardRef?.nativeElement) {
       console.error('Le conteneur #board est introuvable');
       return;
     }
 
-    this.initializePosition();
     this.initializeGround();
     this.attachGround();
     this.syncGroundFromState();
@@ -548,6 +557,7 @@ export class Shogiban implements AfterViewInit {
     this.analysisArrows = [
       ...this.analysisArrows,
       {
+        id: this.nextArrowId(),
         orig: latestShape.orig,
         dest: latestShape.dest,
         color: '#ec4899',
@@ -566,5 +576,36 @@ export class Shogiban implements AfterViewInit {
         shapes: [],
       },
     });
+  }
+
+  private nextArrowId(): string {
+    this.arrowSeq += 1;
+    return `arrow-${this.arrowSeq}`;
+  }
+
+  setArrowTool(tool: 'draw' | 'erase'): void {
+    this.activeArrowTool = tool;
+  }
+
+  onArrowHover(arrowId: string | null): void {
+    this.hoveredArrowId = arrowId;
+  }
+
+  onArrowClick(arrowId: string): void {
+    if (this.activeArrowTool === 'erase') {
+      this.analysisArrows = this.analysisArrows.filter((arrow) => arrow.id !== arrowId);
+
+      if (this.hoveredArrowId === arrowId) {
+        this.hoveredArrowId = null;
+      }
+
+      this.cdr.detectChanges();
+      return;
+    }
+
+    // plus tard :
+    // recolor
+    // annotate
+    // select
   }
 }

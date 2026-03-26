@@ -2,8 +2,8 @@
   position: absolute;
   inset: 0;
   display: block;
-  pointer-events: none;
   z-index: 4;
+  pointer-events: none;
 }
 
 .arrows-overlay {
@@ -11,4 +11,20 @@
   height: 100%;
   display: block;
   overflow: visible;
+  pointer-events: none;
+}
+
+.arrow-hit-area {
+  stroke: transparent;
+  fill: none;
+  pointer-events: stroke;
+  cursor: pointer;
+}
+
+.arrow-visible {
+  fill: none;
+  pointer-events: none;
+  transition:
+    stroke-width 120ms ease,
+    opacity 120ms ease;
 }

@@ -1,6 +1,7 @@
-import { Component, Input } from '@angular/core';
+import { Component, EventEmitter, Input, Output } from '@angular/core';
 
 export type BoardArrow = {
+  id: string;
   orig: string;
   dest: string;
   color?: string;
@@ -32,8 +33,10 @@ type ArrowView = {
   x2: number;
   y2: number;
   color: string;
-  strokeWidth: number;
+  visualStrokeWidth: number;
+  hitStrokeWidth: number;
   opacity: number;
+  isHovered: boolean;
 };
 
 const BOARD_FILES = ['9', '8', '7', '6', '5', '4', '3', '2', '1'] as const;
@@ -48,6 +51,10 @@ const BOARD_RANKS = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i'] as const;
 export class BoardArrowsOverlayComponent {
   @Input() visible = false;
   @Input() arrows: BoardArrow[] = [];
+  @Input() hoveredArrowId: string | null = null;
+
+  @Output() arrowHover = new EventEmitter<string | null>();
+  @Output() arrowClick = new EventEmitter<string>();
 
   private readonly laneGap = 0.16;
   private readonly defaultStartInset = 0.08;
@@ -55,7 +62,7 @@ export class BoardArrowsOverlayComponent {
 
   get viewArrows(): ArrowView[] {
     const prepared = this.arrows
-      .map((arrow, index) => this.prepareArrow(arrow, index))
+      .map((arrow) => this.prepareArrow(arrow))
       .filter((arrow): arrow is PreparedArrow => arrow !== null);
 
     const groups = new Map<string, PreparedArrow[]>();
@@ -80,7 +87,21 @@ export class BoardArrowsOverlayComponent {
     return result;
   }
 
-  private prepareArrow(arrow: BoardArrow, index: number): PreparedArrow | null {
+  onArrowMouseEnter(arrowId: string): void {
+    this.arrowHover.emit(arrowId);
+  }
+
+  onArrowMouseLeave(): void {
+    this.arrowHover.emit(null);
+  }
+
+  onArrowClickInternal(event: MouseEvent, arrowId: string): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.arrowClick.emit(arrowId);
+  }
+
+  private prepareArrow(arrow: BoardArrow): PreparedArrow | null {
     const origPoint = this.squareToCenter(arrow.orig);
     const destPoint = this.squareToCenter(arrow.dest);
 
@@ -93,7 +114,7 @@ export class BoardArrowsOverlayComponent {
     if (len === 0) return null;
 
     return {
-      id: `${arrow.orig}-${arrow.dest}-${index}`,
+      id: arrow.id,
       orig: arrow.orig,
       dest: arrow.dest,
       origPoint,
@@ -113,6 +134,10 @@ export class BoardArrowsOverlayComponent {
     const ux = dx / len;
     const uy = dy / len;
 
+    const isHovered = this.hoveredArrowId === arrow.id;
+    const visualStrokeWidth = isHovered ? arrow.strokeWidth * 1.8 : arrow.strokeWidth;
+    const hitStrokeWidth = Math.max(visualStrokeWidth * 4, 0.28);
+
     return {
       id: arrow.id,
       x1: arrow.origPoint.x + groupNormal.x * offset + ux * this.defaultStartInset,
@@ -120,8 +145,10 @@ export class BoardArrowsOverlayComponent {
       x2: arrow.destPoint.x + groupNormal.x * offset - ux * this.defaultEndInset,
       y2: arrow.destPoint.y + groupNormal.y * offset - uy * this.defaultEndInset,
       color: arrow.color,
-      strokeWidth: arrow.strokeWidth,
+      visualStrokeWidth,
+      hitStrokeWidth,
       opacity: arrow.opacity,
+      isHovered,
     };
   }
 
@@ -147,18 +174,9 @@ export class BoardArrowsOverlayComponent {
   }
 
   private getCanonicalSegment(a: Point, b: Point): { from: Point; to: Point } {
-    if (a.x < b.x) {
-      return { from: a, to: b };
-    }
-
-    if (a.x > b.x) {
-      return { from: b, to: a };
-    }
-
-    if (a.y <= b.y) {
-      return { from: a, to: b };
-    }
-
+    if (a.x < b.x) return { from: a, to: b };
+    if (a.x > b.x) return { from: b, to: a };
+    if (a.y <= b.y) return { from: a, to: b };
     return { from: b, to: a };
   }
 
