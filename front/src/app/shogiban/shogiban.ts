@@ -7,34 +7,24 @@ import {
   ViewChild,
   ViewEncapsulation,
 } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { Shogiground } from 'shogiground';
-import { initialSfen, makeSfen, parseSfen } from 'shogiops/sfen';
 import { checksSquareNames, shogigroundDropDests, shogigroundMoveDests } from 'shogiops/compat';
-import { parseSquareName } from 'shogiops/util';
+import { initialSfen, makeSfen, parseSfen } from 'shogiops/sfen';
 import type { Rules } from 'shogiops/types';
+import { parseSquareName } from 'shogiops/util';
 import { pieceCanPromote, pieceForcePromote, promote, unpromote } from 'shogiops/variant/util';
+import { BoardHeatmapOverlayComponent } from './board-heatmap/board-heatmap-overlay';
+import { BOARD_SQUARES, createDefenderHeatmap, type PlayerColor } from './defenders/defender-heatmap';
 import {
   HistoryBranchView,
   HistoryTreeView,
   MoveHistoryComponent,
   MoveNode,
 } from './move-history/move-history';
-import {
-  BOARD_SQUARES,
-  createDefenderHeatmap,
-  getOpponentColor,
-  HeatmapTone,
-  PlayerColor,
-  ShogiPositionLike,
-} from './defenders/defender-heatmap';
-import { BoardHeatmapOverlayComponent } from './board-heatmap/board-heatmap-overlay';
-
-type DefenderViewMode = 'allies' | 'enemies';
 
 @Component({
   selector: 'app-shogiban',
-  imports: [CommonModule, MoveHistoryComponent, BoardHeatmapOverlayComponent],
+  imports: [MoveHistoryComponent, BoardHeatmapOverlayComponent],
   templateUrl: './shogiban.html',
   styleUrl: './shogiban.css',
   encapsulation: ViewEncapsulation.None,
@@ -53,30 +43,20 @@ export class Shogiban implements AfterViewInit {
 
   private readonly rules: Rules = 'standard';
   private readonly initialSfenString = initialSfen(this.rules);
-
-  private position?: ShogiPositionLike & {
-    isLegal(move: unknown): boolean;
-    play(move: unknown): void;
-  };
+  private position?: any;
 
   public readonly boardSquares = BOARD_SQUARES;
-  public showDefenders = false;
-  public defenderViewMode: DefenderViewMode = 'allies';
-  public defenderCounts = new Map<string, number>();
+  public readonly ownSide: PlayerColor = 'sente';
+  public readonly opponentSide: PlayerColor = 'gote';
+
+  public showOwnDefenders = false;
+  public showOpponentDefenders = false;
+  public ownDefenderCounts = new Map<string, number>();
+  public opponentDefenderCounts = new Map<string, number>();
 
   public currentNodeId = 'root';
   public nodesById: Record<string, MoveNode> = {};
   private nodeSeq = 0;
-
-  get heatmapTone(): HeatmapTone {
-    return this.defenderViewMode === 'allies' ? 'ally' : 'enemy';
-  }
-
-  get heatmapDescription(): string {
-    return this.defenderViewMode === 'allies'
-      ? 'Heatmap des cases contrôlées par les alliés du camp au trait.'
-      : 'Heatmap des cases contrôlées par les ennemis du camp au trait.';
-  }
 
   ngAfterViewInit(): void {
     if (!this.boardRef?.nativeElement) {
@@ -90,26 +70,64 @@ export class Shogiban implements AfterViewInit {
     this.syncGroundFromState();
   }
 
-  toggleDefenders(): void {
-    this.showDefenders = !this.showDefenders;
+  get heatmapDescription(): string {
+    if (this.showOwnDefenders && this.showOpponentDefenders) {
+      return 'Vert : mes pièces. Rouge : pièces adverses. Si une case est contrôlée par les deux camps, elle s’affiche rouge en haut et vert en bas.';
+    }
 
-    if (this.showDefenders) {
-      this.refreshDefenderHeatmap();
+    if (this.showOwnDefenders) {
+      return 'Heatmap des cases contrôlées par mes pièces (camp du bas).';
+    }
+
+    if (this.showOpponentDefenders) {
+      return 'Heatmap des cases contrôlées par les pièces adverses (camp du haut).';
+    }
+
+    return 'Affiche une heatmap des cases contrôlées.';
+  }
+
+  toggleOwnDefenders(): void {
+    this.showOwnDefenders = !this.showOwnDefenders;
+
+    if (this.showOwnDefenders) {
+      this.recomputeOwnDefenderHeatmap();
     }
   }
 
-  setDefenderViewMode(mode: DefenderViewMode): void {
-    if (this.defenderViewMode === mode) return;
+  toggleOpponentDefenders(): void {
+    this.showOpponentDefenders = !this.showOpponentDefenders;
 
-    this.defenderViewMode = mode;
-
-    if (this.showDefenders) {
-      this.refreshDefenderHeatmap();
+    if (this.showOpponentDefenders) {
+      this.recomputeOpponentDefenderHeatmap();
     }
+  }
+
+  public goToNode(nodeId: string): void {
+    const node = this.nodesById[nodeId];
+    if (!node) return;
+
+    this.position = parseSfen(this.rules, node.sfenAfter).unwrap();
+    this.currentNodeId = nodeId;
+    this.syncGroundFromState();
+    this.cdr.detectChanges();
+  }
+
+  public get historyTree(): HistoryTreeView | null {
+    const root = this.nodesById['root'];
+    if (!root) return null;
+
+    const [mainlineStartId, ...rootVariationIds] = root.childrenIds;
+
+    return {
+      mainline: mainlineStartId ? this.buildHistoryBranch(mainlineStartId, 1, false) : null,
+      rootVariations: rootVariationIds.map((variationId) =>
+        this.buildHistoryBranch(variationId, 1, false),
+      ),
+    };
   }
 
   private initializePosition(): void {
-    this.position = parseSfen(this.rules, this.initialSfenString).unwrap() as typeof this.position;
+    this.position = parseSfen(this.rules, this.initialSfenString).unwrap();
 
     this.nodesById = {
       root: {
@@ -158,7 +176,9 @@ export class Shogiban implements AfterViewInit {
   private syncGroundFromState(): void {
     if (!this.ground || !this.position) return;
 
-    const sfen = makeSfen(this.position as never);
+    this.recomputeVisibleHeatmaps();
+
+    const sfen = makeSfen(this.position);
     const [board, turn, hands] = sfen.split(' ');
 
     this.ground.set({
@@ -178,7 +198,7 @@ export class Shogiban implements AfterViewInit {
       movable: {
         free: false,
         showDests: true,
-        dests: shogigroundMoveDests(this.position as never),
+        dests: shogigroundMoveDests(this.position),
         events: {
           after: (orig, dest, prom) => {
             this.ngZone.run(() => {
@@ -214,25 +234,28 @@ export class Shogiban implements AfterViewInit {
         },
       },
 
-      checks: checksSquareNames(this.position as never),
+      checks: checksSquareNames(this.position),
     });
-
-    if (this.showDefenders) {
-      this.refreshDefenderHeatmap();
-    }
   }
 
-  private refreshDefenderHeatmap(): void {
-    if (!this.position) {
-      this.defenderCounts = new Map<string, number>();
-      return;
+  private recomputeOwnDefenderHeatmap(): void {
+    if (!this.position) return;
+    this.ownDefenderCounts = createDefenderHeatmap(this.position, this.ownSide);
+  }
+
+  private recomputeOpponentDefenderHeatmap(): void {
+    if (!this.position) return;
+    this.opponentDefenderCounts = createDefenderHeatmap(this.position, this.opponentSide);
+  }
+
+  private recomputeVisibleHeatmaps(): void {
+    if (this.showOwnDefenders) {
+      this.recomputeOwnDefenderHeatmap();
     }
 
-    const sideToMove = this.currentSideFromPosition();
-    const viewedSide =
-      this.defenderViewMode === 'allies' ? sideToMove : getOpponentColor(sideToMove);
-
-    this.defenderCounts = createDefenderHeatmap(this.position, viewedSide);
+    if (this.showOpponentDefenders) {
+      this.recomputeOpponentDefenderHeatmap();
+    }
   }
 
   private promotesToRole(role: string): string | undefined {
@@ -270,7 +293,7 @@ export class Shogiban implements AfterViewInit {
 
     this.position.play(move);
 
-    const sfenAfter = makeSfen(this.position as never);
+    const sfenAfter = makeSfen(this.position);
 
     this.appendChildNode({
       side,
@@ -288,7 +311,7 @@ export class Shogiban implements AfterViewInit {
 
   private computeDropDests() {
     if (!this.position) return new Map();
-    return shogigroundDropDests(this.position as never);
+    return shogigroundDropDests(this.position);
   }
 
   private handleDrop(piece: { role: string }, key: string, _prom: boolean): void {
@@ -316,7 +339,7 @@ export class Shogiban implements AfterViewInit {
 
     this.position.play(dropMove);
 
-    const sfenAfter = makeSfen(this.position as never);
+    const sfenAfter = makeSfen(this.position);
 
     this.appendChildNode({
       side,
@@ -344,7 +367,7 @@ export class Shogiban implements AfterViewInit {
 
     const capture = this.position.board.get(to);
 
-    return pieceCanPromote(this.rules)(piece as never, from as never, to as never, capture as never);
+    return pieceCanPromote(this.rules)(piece, from, to, capture);
   }
 
   private mustPromoteOnMove(orig: string, dest: string): boolean {
@@ -358,13 +381,13 @@ export class Shogiban implements AfterViewInit {
     const piece = this.position.board.get(from);
     if (!piece) return false;
 
-    return pieceForcePromote(this.rules)(piece as never, to as never);
+    return pieceForcePromote(this.rules)(piece, to);
   }
 
-  private currentSideFromPosition(): PlayerColor {
+  private currentSideFromPosition(): 'sente' | 'gote' {
     if (!this.position) return 'sente';
 
-    const sfen = makeSfen(this.position as never);
+    const sfen = makeSfen(this.position);
     const [, turn] = sfen.split(' ');
 
     return turn === 'w' ? 'gote' : 'sente';
@@ -376,16 +399,6 @@ export class Shogiban implements AfterViewInit {
 
   private buildDropLabel(role: string, dest: string): string {
     return `${role}*${dest}`;
-  }
-
-  public goToNode(nodeId: string): void {
-    const node = this.nodesById[nodeId];
-    if (!node) return;
-
-    this.position = parseSfen(this.rules, node.sfenAfter).unwrap() as typeof this.position;
-    this.currentNodeId = nodeId;
-    this.syncGroundFromState();
-    this.cdr.detectChanges();
   }
 
   private createNodeId(): string {
@@ -455,9 +468,7 @@ export class Shogiban implements AfterViewInit {
 
       if (!(isFirstMove && !includeSiblingVariationsOnFirstMove)) {
         const parent = node.parentId !== null ? this.nodesById[node.parentId] : undefined;
-
         const siblingIds = parent?.childrenIds.filter((childId) => childId !== currentId) ?? [];
-
         variations = siblingIds.map((siblingId) => this.buildHistoryBranch(siblingId, ply, false));
       }
 
@@ -477,20 +488,6 @@ export class Shogiban implements AfterViewInit {
     return {
       startNodeId,
       moves,
-    };
-  }
-
-  public get historyTree(): HistoryTreeView | null {
-    const root = this.nodesById['root'];
-    if (!root) return null;
-
-    const [mainlineStartId, ...rootVariationIds] = root.childrenIds;
-
-    return {
-      mainline: mainlineStartId ? this.buildHistoryBranch(mainlineStartId, 1, false) : null,
-      rootVariations: rootVariationIds.map((variationId) =>
-        this.buildHistoryBranch(variationId, 1, false),
-      ),
     };
   }
 }

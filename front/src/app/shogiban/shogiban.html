@@ -14,41 +14,34 @@
         <strong>Vue d’influence</strong>
         <span>
           {{
-            showDefenders
+            showOwnDefenders || showOpponentDefenders
               ? heatmapDescription
-              : 'Affiche une heatmap des cases contrôlées par les alliés ou les ennemis.'
+              : 'Affiche une heatmap des cases contrôlées par mes pièces et/ou celles de mon adversaire.'
           }}
         </span>
       </div>
 
       <div class="toolbar-actions">
-        <div class="toolbar-toggle-group" aria-label="Camp affiché">
-          <button
-            type="button"
-            class="toolbar-btn toolbar-btn--segmented"
-            [class.active]="defenderViewMode === 'allies'"
-            (click)="setDefenderViewMode('allies')"
-          >
-            Alliés
-          </button>
-
-          <button
-            type="button"
-            class="toolbar-btn toolbar-btn--segmented toolbar-btn--enemy"
-            [class.active]="defenderViewMode === 'enemies'"
-            (click)="setDefenderViewMode('enemies')"
-          >
-            Ennemis
-          </button>
-        </div>
-
         <button
           type="button"
           class="toolbar-btn"
-          [class.active]="showDefenders"
-          (click)="toggleDefenders()"
+          [class.active]="showOwnDefenders"
+          (click)="toggleOwnDefenders()"
         >
-          {{ showDefenders ? 'Masquer les défenseurs' : 'Afficher les défenseurs' }}
+          {{ showOwnDefenders ? 'Masquer mes défenseurs' : 'Afficher mes défenseurs' }}
+        </button>
+
+        <button
+          type="button"
+          class="toolbar-btn toolbar-btn--enemy"
+          [class.active]="showOpponentDefenders"
+          (click)="toggleOpponentDefenders()"
+        >
+          {{
+            showOpponentDefenders
+              ? 'Masquer les défenseurs adverses'
+              : 'Afficher les défenseurs adverses'
+          }}
         </button>
       </div>
     </div>
@@ -62,10 +55,12 @@
             <div #board class="sg-wrap board-host"></div>
 
             <app-board-heatmap-overlay
-              [visible]="showDefenders"
+              [visible]="showOwnDefenders || showOpponentDefenders"
               [squareNames]="boardSquares"
-              [counts]="defenderCounts"
-              [tone]="heatmapTone"
+              [allyVisible]="showOwnDefenders"
+              [enemyVisible]="showOpponentDefenders"
+              [allyCounts]="ownDefenderCounts"
+              [enemyCounts]="opponentDefenderCounts"
             />
           </div>
         </div>

@@ -3,7 +3,7 @@
     <div
       class="heatmap-cell"
       *ngFor="let squareName of squareNames; trackBy: trackBySquare"
-      [style.background-color]="getSquareColor(squareName)"
+      [style.background]="getSquareBackground(squareName)"
     ></div>
   </div>
 </div>
