@@ -6,7 +6,9 @@ app-shogiban {
   --card-radius: 22px;
   --card-border: #e5e7eb;
   --card-bg: #ffffff;
-  --card-shadow: 0 12px 28px rgba(15, 23, 42, 0.08), 0 2px 8px rgba(15, 23, 42, 0.04);
+  --card-shadow:
+    0 12px 28px rgba(15, 23, 42, 0.08),
+    0 2px 8px rgba(15, 23, 42, 0.04);
 }
 
 .analysis-layout {
@@ -56,6 +58,87 @@ app-shogiban {
   font-size: 0.97rem;
 }
 
+.workspace-toolbar {
+  padding: 18px 24px 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.workspace-toolbar__text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: #4b5563;
+  font-size: 0.94rem;
+}
+
+.workspace-toolbar__text strong {
+  color: #111827;
+  font-size: 0.98rem;
+}
+
+.toolbar-btn {
+  border: 1px solid #e5e7eb;
+  border-radius: 999px;
+  padding: 10px 16px;
+  background: #ffffff;
+  color: #374151;
+  cursor: pointer;
+  font-size: 0.92rem;
+  font-weight: 600;
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease,
+    transform 160ms ease;
+}
+
+.toolbar-btn:hover {
+  background: #f9fafb;
+  border-color: #d1d5db;
+}
+
+.toolbar-btn.active {
+  background: #e7f7ea;
+  border-color: #7cc28a;
+  color: #155724;
+}
+
+.toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.toolbar-toggle-group {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px;
+  border: 1px solid #e5e7eb;
+  border-radius: 999px;
+  background: #ffffff;
+}
+
+.toolbar-btn--segmented {
+  border: 0;
+  box-shadow: none;
+}
+
+.toolbar-btn--segmented.active {
+  background: #e7f7ea;
+  border-color: transparent;
+  color: #155724;
+}
+
+.toolbar-btn--enemy.active {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
 .workspace-card__body {
   padding: 22px 24px 24px;
   overflow-x: auto;
@@ -74,6 +157,12 @@ app-shogiban {
   flex: 0 0 auto;
 }
 
+.board-stack {
+  position: relative;
+  width: var(--board-size);
+  height: calc(var(--board-size) / 11 * 12);
+}
+
 .board-host {
   width: var(--board-size);
   height: calc(var(--board-size) / 11 * 12);
@@ -84,10 +173,6 @@ app-shogiban {
   height: calc(var(--board-size) / 11 * 7 + 3rem);
   position: relative;
   flex: 0 0 auto;
-}
-
-.colored-square {
-  background-color: red !important;
 }
 
 .history-side {
@@ -129,6 +214,15 @@ app-shogiban {
     padding: 20px 20px 0;
   }
 
+  .workspace-toolbar {
+    padding: 16px 20px 0;
+  }
+
+  .toolbar-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
   .workspace-card__body {
     padding: 18px 20px 20px;
   }
@@ -141,7 +235,8 @@ app-shogiban {
     font-size: 1.25rem;
   }
 
-  .section-head__text {
+  .section-head__text,
+  .workspace-toolbar__text {
     font-size: 0.94rem;
   }
 }
@@ -163,11 +258,20 @@ app-shogiban {
     padding: 18px 16px 0;
   }
 
+  .workspace-toolbar {
+    padding: 14px 16px 0;
+  }
+
   .history-intro {
     padding: 16px;
   }
 
   .shogi-layout {
     gap: 10px;
+  }
+
+  .toolbar-btn {
+    width: 100%;
+    justify-content: center;
   }
 }

@@ -2,8 +2,14 @@
   display: block;
   min-height: 100vh;
   color: #1f2937;
-  font-family: Inter, 'Segoe UI', Roboto, Arial, sans-serif;
-  background: radial-gradient(circle at top, #f8fafc 0%, #f3f4f6 38%, #eef2f7 100%);
+  font-family:
+    Inter,
+    'Segoe UI',
+    Roboto,
+    Arial,
+    sans-serif;
+  background:
+    radial-gradient(circle at top, #f8fafc 0%, #f3f4f6 38%, #eef2f7 100%);
 }
 
 *,

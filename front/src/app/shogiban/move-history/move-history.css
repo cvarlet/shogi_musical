@@ -16,7 +16,10 @@
     0 12px 28px rgba(15, 23, 42, 0.08),
     0 2px 8px rgba(15, 23, 42, 0.04);
   color: #1f2937;
-  font-family: Inter, Arial, sans-serif;
+  font-family:
+    Inter,
+    Arial,
+    sans-serif;
 }
 
 .history-header {
