@@ -14,7 +14,11 @@ import type { Rules } from 'shogiops/types';
 import { parseSquareName } from 'shogiops/util';
 import { pieceCanPromote, pieceForcePromote, promote, unpromote } from 'shogiops/variant/util';
 import { BoardHeatmapOverlayComponent } from './board-heatmap/board-heatmap-overlay';
-import { BOARD_SQUARES, createDefenderHeatmap, type PlayerColor } from './defenders/defender-heatmap';
+import {
+  BOARD_SQUARES,
+  createDefenderHeatmap,
+  type PlayerColor,
+} from './defenders/defender-heatmap';
 import {
   HistoryBranchView,
   HistoryTreeView,
@@ -58,6 +62,8 @@ export class Shogiban implements AfterViewInit {
   public nodesById: Record<string, MoveNode> = {};
   private nodeSeq = 0;
 
+  public showLastMoveHighlight = true;
+
   ngAfterViewInit(): void {
     if (!this.boardRef?.nativeElement) {
       console.error('Le conteneur #board est introuvable');
@@ -84,6 +90,10 @@ export class Shogiban implements AfterViewInit {
     }
 
     return 'Affiche une heatmap des cases contrôlées.';
+  }
+
+  toggleLastMoveHighlight(): void {
+    this.showLastMoveHighlight = !this.showLastMoveHighlight;
   }
 
   toggleOwnDefenders(): void {

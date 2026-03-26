@@ -1,45 +1,54 @@
-import { CommonModule } from '@angular/common';
 import { Component, Input } from '@angular/core';
-import { getHeatmapColor } from '../defenders/defender-heatmap';
 
 @Component({
   selector: 'app-board-heatmap-overlay',
   standalone: true,
-  imports: [CommonModule],
   templateUrl: './board-heatmap-overlay.html',
   styleUrl: './board-heatmap-overlay.css',
 })
 export class BoardHeatmapOverlayComponent {
   @Input() visible = false;
-  @Input() squareNames: readonly string[] = [];
+  @Input() squareNames: string[] = [];
+
   @Input() allyVisible = false;
   @Input() enemyVisible = false;
-  @Input() allyCounts: ReadonlyMap<string, number> = new Map<string, number>();
-  @Input() enemyCounts: ReadonlyMap<string, number> = new Map<string, number>();
 
-  trackBySquare(_index: number, squareName: string): string {
-    return squareName;
-  }
+  @Input() allyCounts = new Map<string, number>();
+  @Input() enemyCounts = new Map<string, number>();
 
-  getSquareBackground(squareName: string): string {
-    const allyCount = this.allyVisible ? (this.allyCounts.get(squareName) ?? 0) : 0;
-    const enemyCount = this.enemyVisible ? (this.enemyCounts.get(squareName) ?? 0) : 0;
+  getCellBackground(square: string): string {
+    const allyCount = this.allyVisible ? (this.allyCounts.get(square) ?? 0) : 0;
+    const enemyCount = this.enemyVisible ? (this.enemyCounts.get(square) ?? 0) : 0;
 
-    const allyColor = getHeatmapColor(allyCount, 'ally');
-    const enemyColor = getHeatmapColor(enemyCount, 'enemy');
+    const allyAlpha = this.toAlpha(allyCount);
+    const enemyAlpha = this.toAlpha(enemyCount);
 
-    if (allyCount > 0 && enemyCount > 0) {
-      return `linear-gradient(to bottom, ${enemyColor} 0%, ${enemyColor} 50%, ${allyColor} 50%, ${allyColor} 100%)`;
+    const hasAlly = allyAlpha > 0;
+    const hasEnemy = enemyAlpha > 0;
+
+    if (hasAlly && hasEnemy) {
+      return `linear-gradient(
+        to bottom,
+        rgba(220, 38, 38, ${enemyAlpha}) 0%,
+        rgba(220, 38, 38, ${enemyAlpha}) 50%,
+        rgba(22, 163, 74, ${allyAlpha}) 50%,
+        rgba(22, 163, 74, ${allyAlpha}) 100%
+      )`;
     }
 
-    if (enemyCount > 0) {
-      return enemyColor;
+    if (hasEnemy) {
+      return `rgba(220, 38, 38, ${enemyAlpha})`;
     }
 
-    if (allyCount > 0) {
-      return allyColor;
+    if (hasAlly) {
+      return `rgba(22, 163, 74, ${allyAlpha})`;
     }
 
     return 'transparent';
+  }
+
+  private toAlpha(count: number): number {
+    if (count <= 0) return 0;
+    return Math.min(count, 5) * 0.2;
   }
 }

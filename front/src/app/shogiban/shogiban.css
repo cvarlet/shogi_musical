@@ -6,9 +6,7 @@ app-shogiban {
   --card-radius: 22px;
   --card-border: #e5e7eb;
   --card-bg: #ffffff;
-  --card-shadow:
-    0 12px 28px rgba(15, 23, 42, 0.08),
-    0 2px 8px rgba(15, 23, 42, 0.04);
+  --card-shadow: 0 12px 28px rgba(15, 23, 42, 0.08), 0 2px 8px rgba(15, 23, 42, 0.04);
 }
 
 .analysis-layout {
@@ -150,6 +148,7 @@ app-shogiban {
 }
 
 .board-host {
+  position: relative;
   width: var(--board-size);
   height: calc(var(--board-size) / 11 * 12);
 }
@@ -256,4 +255,19 @@ app-shogiban {
   .shogi-layout {
     gap: 10px;
   }
+}
+
+.board-stack.hide-last-move-highlight sg-squares sq.last-dest,
+.board-stack.hide-last-move-highlight sg-squares sq.last-dest.oc.dest,
+.board-stack.hide-last-move-highlight sg-squares sq.last-dest.oc.pre-dest,
+.board-stack.hide-last-move-highlight sg-squares sq.last-dest.oc.dest.hover,
+.board-stack.hide-last-move-highlight sg-squares sq.last-dest.oc.pre-dest.hover {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+.toolbar-btn--neutral.active {
+  background: #f3f4f6;
+  border-color: #cbd5e1;
+  color: #334155;
 }

@@ -1,9 +1,9 @@
-<div class="heatmap-overlay" *ngIf="visible">
-  <div class="heatmap-grid">
-    <div
-      class="heatmap-cell"
-      *ngFor="let squareName of squareNames; trackBy: trackBySquare"
-      [style.background]="getSquareBackground(squareName)"
-    ></div>
+@if (visible) {
+  <div class="heatmap-overlay">
+    <div class="heatmap-grid">
+      @for (square of squareNames; track square) {
+        <div class="heatmap-cell" [style.background]="getCellBackground(square)"></div>
+      }
+    </div>
   </div>
-</div>
+}

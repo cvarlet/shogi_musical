@@ -43,6 +43,15 @@
               : 'Afficher les défenseurs adverses'
           }}
         </button>
+
+        <button
+          type="button"
+          class="toolbar-btn toolbar-btn--neutral"
+          [class.active]="!showLastMoveHighlight"
+          (click)="toggleLastMoveHighlight()"
+        >
+          {{ showLastMoveHighlight ? 'Masquer le dernier coup' : 'Afficher le dernier coup' }}
+        </button>
       </div>
     </div>
 
@@ -51,7 +60,7 @@
         <div #handLeft class="sg-hand-wrap hand-column hand-top"></div>
 
         <div class="board-column">
-          <div class="board-stack">
+          <div class="board-stack" [class.hide-last-move-highlight]="!showLastMoveHighlight">
             <div #board class="sg-wrap board-host"></div>
 
             <app-board-heatmap-overlay
