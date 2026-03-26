@@ -71,6 +71,11 @@
               [allyCounts]="ownDefenderCounts"
               [enemyCounts]="opponentDefenderCounts"
             />
+
+            <app-board-arrows-overlay
+              [visible]="analysisArrows.length > 0"
+              [arrows]="analysisArrows"
+            />
           </div>
         </div>
 

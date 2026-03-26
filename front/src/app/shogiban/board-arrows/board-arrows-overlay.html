@@ -1,0 +1,32 @@
+@if (visible) {
+  <svg class="arrows-overlay" viewBox="0 0 9 9" preserveAspectRatio="none" aria-hidden="true">
+    <defs>
+      <marker
+        id="board-arrow-head"
+        viewBox="0 0 1 1"
+        refX="0.82"
+        refY="0.5"
+        markerWidth="0.28"
+        markerHeight="0.28"
+        orient="auto"
+        markerUnits="userSpaceOnUse"
+      >
+        <path d="M 0 0 L 1 0.5 L 0 1 z" fill="context-stroke" />
+      </marker>
+    </defs>
+
+    @for (arrow of viewArrows; track arrow.id) {
+      <line
+        [attr.x1]="arrow.x1"
+        [attr.y1]="arrow.y1"
+        [attr.x2]="arrow.x2"
+        [attr.y2]="arrow.y2"
+        [attr.stroke]="arrow.color"
+        [attr.stroke-width]="arrow.strokeWidth"
+        [attr.opacity]="arrow.opacity"
+        stroke-linecap="round"
+        [attr.marker-end]="'url(#board-arrow-head)'"
+      />
+    }
+  </svg>
+}

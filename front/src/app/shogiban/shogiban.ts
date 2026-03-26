@@ -25,10 +25,16 @@ import {
   MoveHistoryComponent,
   MoveNode,
 } from './move-history/move-history';
+import { BoardArrowsOverlayComponent, type BoardArrow } from './board-arrows/board-arrows-overlay';
+
+type NativeDrawableShape = {
+  orig?: string;
+  dest?: string;
+};
 
 @Component({
   selector: 'app-shogiban',
-  imports: [MoveHistoryComponent, BoardHeatmapOverlayComponent],
+  imports: [MoveHistoryComponent, BoardHeatmapOverlayComponent, BoardArrowsOverlayComponent],
   templateUrl: './shogiban.html',
   styleUrl: './shogiban.css',
   encapsulation: ViewEncapsulation.None,
@@ -63,6 +69,16 @@ export class Shogiban implements AfterViewInit {
   private nodeSeq = 0;
 
   public showLastMoveHighlight = true;
+
+  public analysisArrows: BoardArrow[] = [
+    // {
+    //   orig: '7g',
+    //   dest: '7f',
+    //   color: '#ec4899',
+    //   strokeWidth: 0.06,
+    //   opacity: 0.95,
+    // },
+  ];
 
   ngAfterViewInit(): void {
     if (!this.boardRef?.nativeElement) {
@@ -245,6 +261,18 @@ export class Shogiban implements AfterViewInit {
       },
 
       checks: checksSquareNames(this.position),
+
+      drawable: {
+        enabled: true,
+        visible: false,
+        onChange: (shapes) => {
+          this.ngZone.run(() => {
+            this.handleDrawableChange(shapes as NativeDrawableShape[]);
+          });
+        },
+      },
+
+      disableContextMenu: true,
     });
   }
 
@@ -499,5 +527,44 @@ export class Shogiban implements AfterViewInit {
       startNodeId,
       moves,
     };
+  }
+
+  private handleDrawableChange(shapes: NativeDrawableShape[]): void {
+    if (!shapes.length) return;
+
+    const latestShape = shapes[shapes.length - 1];
+    if (!latestShape?.orig || !latestShape?.dest) {
+      this.clearNativeDrawableShapes();
+      return;
+    }
+
+    // clic droit simple sur une case => cercle natif
+    // pour l'instant on l'ignore
+    if (latestShape.orig === latestShape.dest) {
+      this.clearNativeDrawableShapes();
+      return;
+    }
+
+    this.analysisArrows = [
+      ...this.analysisArrows,
+      {
+        orig: latestShape.orig,
+        dest: latestShape.dest,
+        color: '#ec4899',
+        strokeWidth: 0.06,
+        opacity: 0.95,
+      },
+    ];
+
+    this.clearNativeDrawableShapes();
+    this.cdr.detectChanges();
+  }
+
+  private clearNativeDrawableShapes(): void {
+    this.ground?.set({
+      drawable: {
+        shapes: [],
+      },
+    });
   }
 }

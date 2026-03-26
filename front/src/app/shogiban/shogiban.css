@@ -147,6 +147,33 @@ app-shogiban {
   height: calc(var(--board-size) / 11 * 12);
 }
 
+.board-stack .sg-shapes {
+  opacity: 1 !important;
+  pointer-events: none;
+}
+
+/* on cache toutes les shapes natives finales */
+.board-stack .sg-shapes > g > g:not(.current) {
+  display: none;
+}
+
+/* aperçu temporaire pendant le drag */
+.board-stack .sg-shapes g.current line {
+  stroke: #ec4899 !important;
+  opacity: 0.95;
+}
+
+/* si tu fais un clic droit simple, le cercle temporaire sera rose aussi */
+.board-stack .sg-shapes g.current ellipse {
+  stroke: #ec4899 !important;
+  opacity: 0.95;
+}
+
+/* la pointe de flèche */
+.board-stack .sg-shapes marker path {
+  fill: #ec4899 !important;
+}
+
 .board-host {
   position: relative;
   width: var(--board-size);
