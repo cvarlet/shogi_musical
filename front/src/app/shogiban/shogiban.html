@@ -61,6 +61,46 @@
         >
           {{ activeArrowTool === 'erase' ? 'Gomme active' : 'Activer la gomme' }}
         </button>
+
+        <div class="arrow-palette" aria-label="Palette rapide des flèches">
+          <span class="arrow-palette__label">Couleurs rapides</span>
+
+          <div class="arrow-palette__swatches">
+            @for (color of arrowPresetColors; track color + $index) {
+              <button
+                type="button"
+                class="arrow-swatch"
+                [class.active]="selectedArrowColor === color"
+                [style.--swatch-color]="color"
+                [attr.aria-label]="'Choisir la couleur ' + color"
+                [attr.title]="color"
+                (click)="setArrowColor(color)"
+              ></button>
+            }
+          </div>
+        </div>
+
+        <label class="arrow-color-control" title="Couleur des flèches créées au clic droit">
+          <span class="arrow-color-control__label">Couleur flèche</span>
+          <input
+            class="arrow-color-control__input"
+            type="color"
+            [value]="selectedArrowColor"
+            (input)="onArrowColorChange($event)"
+            aria-label="Choisir la couleur des flèches"
+          />
+          <span class="arrow-color-control__value">{{ selectedArrowColor }}</span>
+        </label>
+
+        <label class="toolbar-btn toolbar-btn--neutral toolbar-file">
+          <span>Importer un KIF</span>
+          <input
+            type="file"
+            accept=".kif,.ki2,.csa,text/plain"
+            (change)="onKifuFileSelected($event)"
+            hidden
+          />
+        </label>
       </div>
     </div>
 
@@ -69,7 +109,11 @@
         <div #handLeft class="sg-hand-wrap hand-column hand-top"></div>
 
         <div class="board-column">
-          <div class="board-stack" [class.hide-last-move-highlight]="!showLastMoveHighlight">
+          <div
+            class="board-stack"
+            [class.hide-last-move-highlight]="!showLastMoveHighlight"
+            [style.--arrow-preview-color]="selectedArrowColor"
+          >
             <div #board class="sg-wrap board-host"></div>
 
             <app-board-heatmap-overlay

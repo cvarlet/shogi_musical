@@ -145,6 +145,7 @@ app-shogiban {
   position: relative;
   width: var(--board-size);
   height: calc(var(--board-size) / 11 * 12);
+  --arrow-preview-color: #ec4899;
 }
 
 .board-stack .sg-shapes {
@@ -159,19 +160,19 @@ app-shogiban {
 
 /* aperçu temporaire pendant le drag */
 .board-stack .sg-shapes g.current line {
-  stroke: #ec4899 !important;
+  stroke: var(--arrow-preview-color) !important;
   opacity: 0.95;
 }
 
 /* si tu fais un clic droit simple, le cercle temporaire sera rose aussi */
 .board-stack .sg-shapes g.current ellipse {
-  stroke: #ec4899 !important;
+  stroke: var(--arrow-preview-color) !important;
   opacity: 0.95;
 }
 
 /* la pointe de flèche */
 .board-stack .sg-shapes marker path {
-  fill: #ec4899 !important;
+  fill: var(--arrow-preview-color) !important;
 }
 
 .board-host {
@@ -236,6 +237,10 @@ app-shogiban {
     justify-content: flex-start;
   }
 
+  .arrow-color-control {
+    width: fit-content;
+  }
+
   .workspace-card__body {
     padding: 18px 20px 20px;
   }
@@ -282,6 +287,11 @@ app-shogiban {
   .shogi-layout {
     gap: 10px;
   }
+
+  .arrow-palette,
+  .arrow-color-control {
+    width: fit-content;
+  }
 }
 
 .board-stack.hide-last-move-highlight sg-squares sq.last-dest,
@@ -297,4 +307,54 @@ app-shogiban {
   background: #f3f4f6;
   border-color: #cbd5e1;
   color: #334155;
+}
+
+.arrow-palette {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  background: #ffffff;
+}
+
+.arrow-palette__label {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #374151;
+  white-space: nowrap;
+}
+
+.arrow-palette__swatches {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.arrow-swatch {
+  --swatch-color: #111111;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border-radius: 999px;
+  border: 2px solid #ffffff;
+  background: var(--swatch-color);
+  box-shadow: 0 0 0 1px #d1d5db;
+  cursor: pointer;
+  transition:
+    transform 160ms ease,
+    box-shadow 160ms ease,
+    border-color 160ms ease;
+}
+
+.arrow-swatch:hover {
+  transform: scale(1.08);
+  box-shadow: 0 0 0 1px #9ca3af;
+}
+
+.arrow-swatch.active {
+  transform: scale(1.12);
+  border-color: #111827;
+  box-shadow: 0 0 0 2px #111827;
 }

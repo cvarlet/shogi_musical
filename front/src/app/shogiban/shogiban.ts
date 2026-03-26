@@ -11,7 +11,6 @@ import {
 import { Shogiground } from 'shogiground';
 import { checksSquareNames, shogigroundDropDests, shogigroundMoveDests } from 'shogiops/compat';
 import { initialSfen, makeSfen, parseSfen } from 'shogiops/sfen';
-import type { Rules } from 'shogiops/types';
 import { parseSquareName } from 'shogiops/util';
 import { pieceCanPromote, pieceForcePromote, promote, unpromote } from 'shogiops/variant/util';
 import { BoardHeatmapOverlayComponent } from './board-heatmap/board-heatmap-overlay';
@@ -27,10 +26,50 @@ import {
   MoveNode,
 } from './move-history/move-history';
 import { BoardArrowsOverlayComponent, type BoardArrow } from './board-arrows/board-arrows-overlay';
+import kifuParser from 'kifu-parser';
+import type { Role, Rules } from 'shogiops/types';
 
 type NativeDrawableShape = {
   orig?: string;
   dest?: string;
+};
+
+type ParsedKifuMove = {
+  turn: boolean;
+  to: [number, number];
+  from: [number, number];
+  piece: number;
+  time?: number;
+};
+
+type ParsedKifuSource = {
+  comment?: string;
+  move?: ParsedKifuMove;
+  special?: string;
+  variations?: ParsedKifuSource[][];
+};
+
+type ParsedKifu = {
+  header?: any;
+  initial?: any;
+  sources?: ParsedKifuSource[];
+};
+
+const KIF_PIECE_TO_ROLE: Record<number, Role> = {
+  1: 'pawn',
+  2: 'lance',
+  3: 'knight',
+  4: 'silver',
+  5: 'gold',
+  6: 'bishop',
+  7: 'rook',
+  8: 'king',
+  9: 'tokin',
+  10: 'promotedlance',
+  11: 'promotedknight',
+  12: 'promotedsilver',
+  13: 'horse',
+  14: 'dragon',
 };
 
 @Component({
@@ -85,6 +124,16 @@ export class Shogiban implements OnInit, AfterViewInit {
   public activeArrowTool: 'draw' | 'erase' = 'draw';
 
   private arrowSeq = 0;
+
+  public selectedArrowColor = '#ec4899';
+  public readonly arrowPresetColors = [
+    '#111111', // noir
+    '#dc2626', // rouge
+    '#2563eb', // bleu
+    '#b91c1c', // rouge foncé
+    '#ec4899', // rose
+    '#16a34a', // vert
+  ];
 
   ngOnInit(): void {
     this.initializePosition();
@@ -560,7 +609,7 @@ export class Shogiban implements OnInit, AfterViewInit {
         id: this.nextArrowId(),
         orig: latestShape.orig,
         dest: latestShape.dest,
-        color: '#ec4899',
+        color: this.selectedArrowColor,
         strokeWidth: 0.06,
         opacity: 0.95,
       },
@@ -587,6 +636,23 @@ export class Shogiban implements OnInit, AfterViewInit {
     this.activeArrowTool = tool;
   }
 
+  onArrowColorChange(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const value = input.value?.trim();
+
+    if (!value) return;
+
+    this.setArrowColor(value);
+  }
+
+  setArrowColor(color: string): void {
+    const value = color?.trim();
+
+    if (!value) return;
+
+    this.selectedArrowColor = value;
+  }
+
   onArrowHover(arrowId: string | null): void {
     this.hoveredArrowId = arrowId;
   }
@@ -607,5 +673,188 @@ export class Shogiban implements OnInit, AfterViewInit {
     // recolor
     // annotate
     // select
+  }
+
+  async onKifuFileSelected(event: Event): Promise<void> {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+
+    if (!file) return;
+
+    try {
+      const text = await file.text();
+      this.importKifText(text);
+    } catch (error) {
+      console.error('Import KIF impossible :', error);
+    } finally {
+      input.value = '';
+    }
+  }
+
+  private importKifText(text: string): void {
+    const normalizedText = this.normalizeKifForParser(text);
+
+    const parsed = kifuParser(normalizedText, 'Kif', false) as ParsedKifu;
+    console.log('KIF parsé :', parsed);
+
+    this.loadParsedKifuMainline(parsed);
+  }
+
+  private normalizeKifForParser(text: string): string {
+    const lines = text
+      .replace(/^\uFEFF/, '') // enlève un éventuel BOM
+      .replace(/\r\n/g, '\n')
+      .split('\n');
+
+    return lines
+      .map((line) => {
+        // On cible uniquement les lignes de coups :
+        // ex: "   1   ７六歩(77)"
+        if (!/^\s*\d+\s+/.test(line)) {
+          return line;
+        }
+
+        // Si la ligne a déjà un temps KIF à la fin, on ne touche à rien.
+        // ex: "( 0:03/00:00:03)"
+        if (/\(\s*\d+:\d{2}(?:\+\d+)?\s*\/\s*\d+:\d{2}:\d{2}\s*\)\s*$/.test(line)) {
+          return line;
+        }
+
+        // Sinon on ajoute un faux temps pour éviter le bug de la librairie
+        return `${line}   ( 0:00/00:00:00)`;
+      })
+      .join('\n');
+  }
+
+  private loadParsedKifuMainline(parsed: ParsedKifu): void {
+    // V1 : on repart toujours de la position standard
+    // donc pas encore de gestion des handicaps / positions initiales custom
+    this.initializePosition();
+
+    this.analysisArrows = [];
+    this.hoveredArrowId = null;
+
+    const sources = Array.isArray(parsed?.sources) ? parsed.sources : [];
+
+    for (const source of sources) {
+      if (!source?.move) continue;
+
+      const ok = this.applyImportedMove(source.move);
+
+      if (!ok) {
+        console.warn('Coup KIF ignoré ou illégal :', source.move);
+        break;
+      }
+    }
+
+    this.syncGroundFromState();
+    this.cdr.detectChanges();
+  }
+
+  private applyImportedMove(move: ParsedKifuMove): boolean {
+    if (!this.position) return false;
+
+    const toKey = this.kifCoordToSquareKey(move.to);
+    if (!toKey) return false;
+
+    const to = parseSquareName(toKey);
+    if (to === undefined) return false;
+
+    const isDrop =
+      Array.isArray(move.from) &&
+      move.from.length === 2 &&
+      move.from[0] === 0 &&
+      move.from[1] === 0;
+
+    const targetRole = KIF_PIECE_TO_ROLE[move.piece];
+    if (!targetRole) return false;
+
+    if (isDrop) {
+      const dropMove = {
+        role: targetRole,
+        to,
+      };
+
+      if (!this.position.isLegal(dropMove)) {
+        return false;
+      }
+
+      const side = this.currentSideFromPosition();
+      const label = this.buildDropLabel(targetRole, toKey);
+
+      this.position.play(dropMove);
+
+      const sfenAfter = makeSfen(this.position);
+
+      this.appendChildNode({
+        side,
+        kind: 'drop',
+        label,
+        role: targetRole,
+        to: toKey,
+        sfenAfter,
+      });
+
+      return true;
+    }
+
+    const fromKey = this.kifCoordToSquareKey(move.from);
+    if (!fromKey) return false;
+
+    const from = parseSquareName(fromKey);
+    if (from === undefined) return false;
+
+    const pieceBefore = this.position.board.get(from);
+    if (!pieceBefore) return false;
+
+    const promotion = this.inferImportedPromotion(pieceBefore.role as Role, targetRole);
+
+    const normalMove = {
+      from,
+      to,
+      promotion: promotion || undefined,
+    };
+
+    if (!this.position.isLegal(normalMove)) {
+      return false;
+    }
+
+    const side = this.currentSideFromPosition();
+    const label = this.buildMoveLabel(fromKey, toKey, promotion);
+
+    this.position.play(normalMove);
+
+    const sfenAfter = makeSfen(this.position);
+
+    this.appendChildNode({
+      side,
+      kind: 'move',
+      label,
+      from: fromKey,
+      to: toKey,
+      promotion,
+      sfenAfter,
+    });
+
+    return true;
+  }
+
+  private inferImportedPromotion(beforeRole: Role, afterRole: Role): boolean {
+    if (beforeRole === afterRole) {
+      return false;
+    }
+
+    return this.promotesToRole(beforeRole) === afterRole;
+  }
+
+  private kifCoordToSquareKey(coord?: [number, number]): string | null {
+    if (!coord || coord.length !== 2) return null;
+
+    const [file, rank] = coord;
+
+    const rankLetter = ['?', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i'][rank];
+    if (!rankLetter || rankLetter === '?') return null;
+
+    return `${file}${rankLetter}`;
   }
 }
